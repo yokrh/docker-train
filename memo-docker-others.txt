@@ -1,0 +1,115 @@
+##### .dockerignore
+.gitignore的な。
+秘密ファイルの除外 / 軽量化 のため
+
+
+##### docker-compose.yml
+```
+web:
+  build: .
+  links:
+    - redis
+  ports:
+    - "3000"
+    - "8000"
+
+redis:
+  image: redis:alpine
+  volumes:
+    - /var/redis/data:/data
+```
+docker-compose up -d
+docker-compose ps
+docker-compose logs
+docker-compose down
+docker-compose ps
+
+
+##### DockerFile 基本的な使い方 勉強メモ
+# ref: qiita
+# https://qiita.com/nl0_blu/items/1de829288db2670276e8
+# ref: よさげなblog (Dockerfile ベストプラクティス (仮)
+# https://www.qoosky.io/techs/f38c112ca9
+# 注：CMDは最後の1行だけ実行される。
+# 複数行実行したい場合はいくつかテクニックがあるみたいで、
+# shファイルをCOPYしてRUNでchmodしてCMDではコピーしたshを実行がよさそう
+
+### Hello DockerFile
+vim DockerFile
+```
+FROM centos
+MAINTAINER yokrh <y.oka.gml@gmail.com>
+RUN echo "*** is building ***"
+CMD echo "*** is running ***"
+```
+docker build -t image0 .
+docker images
+docker run -it --name container0 image0
+docker ps
+
+
+### web server
+vim startup.sh
+```
+#!/usr/bin/env bash
+
+echo "*** startup.sh ***"
+nginx
+bash
+```
+vim DockerFile
+```
+FROM centos
+MAINTAINER yokrh <y.oka.gml@gmail.com>
+RUN echo "*** is building ***"
+RUN rpm -ivh http://nginx.org/packages/centos/7/noarch/RPMS/nginx-release-centos-7-0.el7.ngx.noarch.rpm
+RUN yum install -y nginx
+EXPOSE 80
+COPY ./index.html /usr/share/nginx/html/index.html
+COPY startup.sh /startup.sh
+RUN chmod 744 /startup.sh
+CMD ["/startup.sh"]
+#CMD /bin/bash -c "nginx && bash"
+```
+docker build -t my-image .
+docker run -it -d -p 8080:80 --name my-container my-image
+docker images
+docker ps -a
+docker ps
+docker logs my-container
+curl localhost:8080
+docker rm -f my-container
+docker rmi my-image
+
+
+### onbuild：作成したイメージ1を元にして作成したイメージ2で実行される
+# （このDockerFileによるイメージ作成時には実行されない）
+```
+FROM node:7
+RUN mkdir -p /usr/src/app
+WORKDIR /usr/src/app
+ONBUILD COPY package.json /usr/src/app/
+ONBUILD RUN npm install
+ONBUILD COPY . /usr/src/app
+CMD [ "npm", "start" ]
+```
+
+
+### label：ラベルをつけられる
+```
+LABEL vendor=Katacoda \ com.katacoda.version=0.0.5 \ com.katacoda.build-date=2016-07-01T10:47:29Z \ com.katacoda.course=Docker
+```
+
+
+### multi-stage-build：FROMを複数で、前のFROMをベースに次のを作れる
+```
+FROM golang:alpine AS build-env
+ADD . /work
+WORKDIR /work
+RUN go build -o hello main.go
+
+FROM busybox
+COPY --from=build-env /work/hello /usr/local/bin/hello
+ENTRYPOINT ["/usr/local/bin/hello"]
+```
+

@@ -1,0 +1,146 @@
+##### よく使いそうな docker 基本コマンド勉強メモ
+# ref: qiita
+# https://qiita.com/curseoff/items/a9e64ad01d673abb6866
+# <略> install
+
+# とりあえずdockerコマンドあるか確認
+docker -v
+
+### list images
+docker images
+### list containers running
+docker ps
+### list containers
+docker ps -a
+
+### hello docker
+docker run hello-world
+docker images
+
+### remove image
+docker rmi hello-world
+docker images
+
+### download image
+docker pull nginx:latest
+
+### download image from docker hub if none, create container, and run
+docker run -it --name c1 centos
+# $ exit
+docker images
+docker ps
+
+### create container and run as deamon
+docker run -it -d --name c2 centos
+docker ps
+
+### stop
+docker stop c2
+docker ps
+
+### start
+docker start c1
+docker ps
+
+### connect1
+docker attach c1
+### exit1
+# $ exit
+docker ps
+
+### connect2 (using command in container)
+docker start c1
+docker ps
+docker exec -it c1 bash
+
+### exit2
+# $ ctrl-p ctrl-q
+docker ps
+docker stop c1
+docker ps
+
+### create container
+### 注：-itがないと操作できないcontainerになる
+docker create -it --name c3 centos 
+docker ps -a
+
+### remove container
+docker rm c3
+docker ps -a
+
+### create container and run with port-forwarding
+### 注：-pはrunにしかない。createにはない
+docker run -it -d --name n1 -p 8080:80 nginx
+curl localhost:8080
+
+### see stdout log of container
+docker logs n1
+curl localhost:8080
+docker logs n1
+
+
+##### 以下 ref: katacoda
+# https://www.katacoda.com/courses/docker
+
+### search
+docker search <official-image>
+
+### inspect
+docker inspect <image>
+docker inspect <container>
+
+### build image with tag (ex:versioning
+docker build -t <image>:<tag> .
+
+### environment variables
+docker run -d --name <name> -e NODE_ENV=production -p xxx:yyy <image>
+
+### label
+# -l (single
+docker run -l user=12345 -d <image>
+# --label-file (multiple
+docker run --label-file=labels -d <image>
+# show with filtering
+docker ps --filter "label=user=scrapbook"
+docker images --filter "label=vendor=Katacoda"
+
+### export tar
+docker export dataContainer > dataContainer.tar
+
+### mount 1 (mapping)
+# -v ホストとのマウント。Volumeのv
+docker run -d --name redisMapped -v /opt/docker/data/redis:/data redis
+
+### mount 2 (data container)
+# -v ホストとのマウント。createコマンド
+docker create -v /config --name dataContainer busybox
+docker cp config.conf dataContainer:/config/
+# --volumes-from マウント引き継ぎ
+docker run --volumes-from dataContainer ubuntu ls /config
+# --volumes-from マウント引き継ぎ。read-only
+docker run -v /docker/redis-data:/data:ro -it ubuntu rm -rf /data
+
+### link
+# -link 別コンテナへのマウント
+docker run --link redis-server:redis alpine ping -c 1 redis
+
+### network
+docker network ls
+docker network inspect frontend-network
+# create
+docker network create backend-network
+# connect 1
+docker run -d --name=redis --net=backend-network redis
+docker run --net=backend-network alpine ping -c1 redis
+# connect 2
+docker network connect frontend-network redis
+# connect 3 with alias
+docker network connect --alias db frontend-network2 redis
+docker run --net=frontend-network2 alpine ping -c1 db
+# disconnect
+docker network disconnect frontend-network redis
+
+### docker stat
+# リソース使用状況
+docker stats nginx
+docker ps -q | xargs docker stats
