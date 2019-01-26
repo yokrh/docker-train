@@ -1,0 +1,141 @@
+##### overview
+
+DESIGN
+deployment (with service) > replicaSet > pod > container
+
+RUNNING
+Master -[watch]-> Node -[watch]-> pod
+
+# Pod
+A Pod is a group of one or more application containers
+(such as Docker or rkt) and includes shared storage (volumes),
+IP address and information about how to run them.
+
+# Node
+A Pod always runs on a Node. A Node is a worker machine in Kubernetes
+and may be either a virtual or a physical machine, depending on the cluster.
+Each Node is managed by the Master. A Node can have multiple pods, and
+the Kubernetes master automatically handles scheduling the pods across the Nodes in the cluster.
+The Master's automatic scheduling takes into account the available resources on each Node.
+
+# Kubelet
+Kubelet, a process responsible for communication between the Kubernetes Master and the Node;
+it manages the Pods and the containers running on a machine.
+
+# Service
+A Kubernetes Service is an abstraction layer
+which defines a logical set of Pods and
+enables external traffic exposure, load balancing and service discovery for those Pods.
+
+
+##### minikube
+# start
+minikube version
+minikube start
+minikube ip
+# stop
+minikube stop
+minikube delete
+
+
+##### kubectl
+### status, node
+kubectl version
+kubectl cluster-info
+kubectl config view
+kubectl get events
+kubectl get nodes
+kubectl describe deployments
+kubectl describe services
+kubectl describe pods
+kubectl describe nodes
+
+### deployment
+# create a Deployment that manages a Pod
+kubectl create deployment hello-node --image=gcr.io/hello-minikube-zero-install/hello-node
+kubectl get deployments
+kubectl get pods
+# create 2
+kubectl run first-deployment --image=katacoda/docker-http-server --port=80
+kubectl get deployments
+kubectl get pods
+# scale
+kubectl scale deployments/kubernetes-bootcamp --replicas=4
+kubectl scale deployments/kubernetes-bootcamp --replicas=2
+kubectl get pods -o wide
+# update
+kubectl set image deployments/kubernetes-bootcamp kubernetes-bootcamp=gcr.io/google-samples/kubernetes-bootcamp:v2
+# rollback
+kubectl rollout undo deployments/kubernetes-bootcamp
+
+### service
+# create service; expose; make pod accessible from outside the Kubernetes virtual network
+kubectl expose deployment first-deployment --port=80 --type=NodePort
+(
+export PORT=$(kubectl get svc first-deployment -o go-template='{{range.spec.ports}}{{if .nodePort}}{{.nodePort}}{{"\n"}}{{end}}{{end}}')
+echo "Accessing host01:$PORT"
+curl host01:$PORT
+)
+kubectl get services
+== kubectl get svc
+
+### clean
+kubectl delete service hello-node
+kubectl delete deployment hello-node
+
+### exec
+kubectl exec -ti $POD_NAME bash
+
+
+##### yaml
+
+### deployment.yaml
+# create
+```
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: webapp1
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: webapp1
+    spec:
+      containers:
+      - name: webapp1
+        image: katacoda/docker-http-server:latest
+        ports:
+        - containerPort: 80
+```
+kubectl create -f deployment.yaml
+kubectl get deployment
+kubectl describe deployment webapp1
+# update
+kubectl apply -f deployment.yaml
+
+### service.yaml
+# create
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp1-svc
+  labels:
+    app: webapp1
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    nodePort: 30080
+  selector:
+    app: webapp1
+```
+kubectl create -f service.yaml
+kubectl get svc
+kubectl describe svc webapp1-svc.
+
+
+
+
